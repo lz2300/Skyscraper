@@ -4,17 +4,8 @@ using UnityEngine;
 
 public abstract class ItemData : MonoBehaviour
 {
-    public abstract void SetType(BoxType _type);
-    public virtual void LinderStarItem()
+   public virtual void LockEvent(BoxType _type)
     {
-
-    }
-    public virtual void NorMalItem()
-    {
-
-    }
-    public virtual void BoxItem()
-    {
-
+        GameCtroller.Ins.gameManager.LockEvent();
     }
 }
