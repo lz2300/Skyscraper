@@ -16,6 +16,13 @@ public class GamePanelData
     //最大的连续combo层数
     public int userMaxCombo;
     public Vector3 vctPos;
+
+    //上锁层数差最大
+    public int maxNum;
+    //上锁层数差 最小
+    public int difMinNum;
+    //每一步增加计算
+    public int tempLockData;
     public GamePanelData()
     {
        
@@ -29,6 +36,21 @@ public class GamePanelData
         vctPos = pos;
     }
 }
+public class RemberData 
+{
+    public float Speed;
+    public int Layer;
+    public RemberData()
+    {
+
+    }
+    public RemberData(float _speed)
+    {
+        Speed = _speed;
+        Layer = 1;
+    }
+}
+
 public enum GameType 
 {
     未开始,
@@ -39,6 +61,8 @@ public enum GameType
 
 public class GameManager : MonoBehaviour
 {
+    private Dictionary<int, int> difLock = new Dictionary<int, int>(); //锁与锁之间间隔
+    private List<RemberData> rmbData = new List<RemberData>();
     public SkyscraperItem ins_ObjBox;
     public Transform objParent;
     [SerializeField]
@@ -74,19 +98,23 @@ public class GameManager : MonoBehaviour
 
     BoxType _type = BoxType.Box;
 
-    public Button fallingBtn;         //下落事件
+    public Button FallingBtn;         //下落事件
     public Button GameTypeBtn;        //游戏箱子变化
     public Text time;                 //游戏时间
-    public Text Score;                //游戏分数
-    public Text PerfectLayerNum;      //完美重合
-    public Text PerfectMaxLayerNum;   //最大完美重合数目  
+    public Text score;                //游戏分数
+    public Text perfectLayerNum;      //完美重合
+    public Text perfectMaxLayerNum;   //最大完美重合数目  
     public Text curLayer;             //当前层数
     public Text lockLayerText;        //首次使用上锁层数
     public TMP_InputField inputLayer; //限制层数
-    public Text MaximumUsageSpeed;    //最多使用速度
-    public Text MaximumUsageSpeedTime;//最多使用速度时间
+    public Text maximumUsageSpeed;    //锁与锁之间的间隔层数
+    public Text maximumUsageSpeedTime;//最大速度 层数
     public Button Again;
     public Button Quit;
+    public Button Lock;
+    public Button ClosePanel;
+    public Button AddSpeed;
+    public Button SubSpeed;
     private void Start()
     {
         inputSpeed.text = "1";
@@ -96,12 +124,60 @@ public class GameManager : MonoBehaviour
         linrender.startWidth = 0.1f;
         linrender.startColor = Color.red;
         linrender.endColor = Color.red;
-        fallingBtn.onClick.AddListener(FallingEvent);
+        FallingBtn.onClick.AddListener(FallingEvent);
         GameTypeBtn.onClick.AddListener(GameTypeEvent);
         Again.onClick.AddListener(Init);
         Quit.onClick.AddListener(QuitEvent);
+        Lock.onClick.AddListener(ToLockBoxEvent);
+        ClosePanel.onClick.AddListener(ClosePanelEvenet);
+        AddSpeed.onClick.AddListener(AddSpeedEvent);
+        SubSpeed.onClick.AddListener(SubSpeedEvent);
         data.vctPos = objParent.localPosition;
     }
+
+    private void SubSpeedEvent()
+    {
+        int sp = int.Parse(inputSpeed.text);
+        if (sp > 0)
+        {
+            sp--;
+        }
+        inputSpeed.text = sp.ToString();
+    }
+
+    private void AddSpeedEvent()
+    {
+        int sp = int.Parse(inputSpeed.text);
+        sp +=1;
+        inputSpeed.text = sp.ToString();
+    }
+
+    private void ClosePanelEvenet()
+    {
+        bool isActive;
+        if (ClosePanel.GetComponentInChildren<Text>().text == "关闭显示")
+        {
+            isActive = false;
+            ClosePanel.GetComponentInChildren<Text>().text = "打开显示";
+        }
+        else
+        {
+            isActive = true;
+            ClosePanel.GetComponentInChildren<Text>().text = "关闭显示";
+        }
+        GameTypeBtn.gameObject.SetActive(isActive);
+        time.transform.parent.gameObject.SetActive(isActive);
+        score.transform.parent.gameObject.SetActive(isActive);
+        perfectLayerNum.transform.parent.gameObject.SetActive(isActive);
+        perfectMaxLayerNum.transform.parent.gameObject.SetActive(isActive);
+        curLayer.transform.parent.gameObject.SetActive(isActive);
+        lockLayerText.transform.parent.gameObject.SetActive(isActive);
+        inputLayer.transform.parent.gameObject.SetActive(isActive);
+        maximumUsageSpeed.transform.parent.gameObject.SetActive(isActive);
+        maximumUsageSpeedTime.transform.parent.gameObject.SetActive(isActive);
+        Lock.gameObject.SetActive(isActive);
+    }
+
     private void Init()
     {
         objParent.transform.localPosition = data.vctPos;
@@ -113,12 +189,20 @@ public class GameManager : MonoBehaviour
         tempListBox.Clear();
         gameType = GameType.进行中;
         data = new GamePanelData(data.vctPos);
-        Score.text = data.score.ToString();
+        score.text = data.score.ToString();
         curLayer.text = data.intNum.ToString();
-        PerfectLayerNum.text = intCoincident.ToString();
-        PerfectMaxLayerNum.text = data.userMaxCombo.ToString();
+        perfectLayerNum.text = intCoincident.ToString();
+        perfectMaxLayerNum.text = data.userMaxCombo.ToString();
         StartCoroutine(swing(linderEndTrf.gameObject));
         GameCtroller.Ins.timeManager.Init();
+        rmbData = new List<RemberData>();
+    }
+    void ToLockBoxEvent()
+    {
+        _type = BoxType.Lock;
+        SpriteRenderer srd = linderEndTrf.GetComponent<SpriteRenderer>();
+        srd.sprite = Load.Instance.ItemBoxSprite(BoxType.Lock);
+        linderEndTrf.localScale = new Vector3(290, 290, 1);
     }
     // Update is called once per frame
     void Update()
@@ -161,13 +245,38 @@ public class GameManager : MonoBehaviour
             gameType = GameType.进行中;
             //增加累计时间 速度计时
         }
-        GameCtroller.Ins.timeManager.AddCumulativeTime(moveSpeed);
+        //GameCtroller.Ins.timeManager.AddCumulativeTime(moveSpeed);
 
         ins_ObjBox = Load.Instance.ItemBox(_type);
         obj = Instantiate(ins_ObjBox, objParent);
         obj.transform.position = linderEndTrf.transform.position;
         obj.transform.localPosition = new Vector3(obj.transform.localPosition.x, obj.transform.localPosition.y,0);
         data.intNum++;
+        //非锁 则记录+
+        if (_type != BoxType.Lock)
+        {
+            data.tempLockData++;
+        }
+        else
+        {
+            if (data.difMinNum == 0)
+            {
+                data.difMinNum = data.tempLockData;
+            }
+            if (data.maxNum == 0)
+            {
+                data.maxNum = data.tempLockData;
+            }
+            data.difMinNum = data.difMinNum < data.tempLockData ? data.difMinNum: data.tempLockData;
+            data.maxNum = data.maxNum > data.tempLockData ?  data.maxNum : data.tempLockData;
+            data.tempLockData = 0;
+        }
+
+        //速度使用层数
+        var tempRmbData =  AddRmbData(moveSpeed);
+        GameCtroller.Ins.gameManager.maximumUsageSpeed.text = "锁最大间隔:" +data.maxNum + "锁最小间隔:" + data.difMinNum;
+        GameCtroller.Ins.gameManager.maximumUsageSpeedTime.text ="速度：" + tempRmbData.Item1.ToString() + "层数："+  tempRmbData.Item2.ToString();
+
         //游戏结束判定
         temoVt = 0;
         for (int i = 0; i < tempListBox.Count; i++)
@@ -201,6 +310,30 @@ public class GameManager : MonoBehaviour
         data.score += (int)_type;
         AddTempListBox(obj);
     }
+
+    private (float,int) AddRmbData(float rmSpeed)
+    {
+        bool isActive = false;
+        for (int i = 0; i < rmbData.Count; i++)
+        {
+            if (rmbData[i].Speed == rmSpeed)
+            {
+                rmbData[i].Layer += 1;
+                isActive = true;
+            }
+        }
+        if (!isActive)
+        {
+            rmbData.Add(new RemberData(rmSpeed));
+        }
+        rmbData.Sort((x,y) =>
+        {
+           return -x.Layer.CompareTo(y.Layer);
+        });
+
+        return (rmbData[0].Speed, rmbData[0].Layer);
+    }
+
     void GameTypeEvent()
     {
         _type = (BoxType)UnityEngine.Random.Range(1, 9);
@@ -227,12 +360,14 @@ public class GameManager : MonoBehaviour
     {
         tempListBox.Add(_box);
         gamePanelObj.gameObject.SetActive(false);
+
         GameCtroller.Ins.timeManager.AddDalyTimeAction(1f, () =>
         {
             gamePanelObj.gameObject.SetActive(true);
             SpriteRenderer srd = linderEndTrf.GetComponent<SpriteRenderer>();
             _type = RandomBoxType;
             srd.sprite = Load.Instance.ItemBoxSprite(_type);
+           
             switch (_type)
             {
                 case BoxType.Box:
@@ -249,10 +384,10 @@ public class GameManager : MonoBehaviour
                     break;
             }
         });
-        Score.text = data.score.ToString();
+        score.text = data.score.ToString();
         curLayer.text = data.intNum.ToString();
-        PerfectLayerNum.text = intCoincident.ToString();
-        PerfectMaxLayerNum.text = data.userMaxCombo.ToString();
+        perfectLayerNum.text = intCoincident.ToString();
+        perfectMaxLayerNum.text = data.userMaxCombo.ToString();
     }
 
     BoxType RandomBoxType
@@ -313,6 +448,7 @@ public class GameManager : MonoBehaviour
     {
         if (data.userLockLayer == 0)
         {
+            //data.userLockLostLayer = data.userLockLayer;
             data.userLockLayer = data.intNum;
             lockLayerText.text = data.userLockLayer.ToString();
         }

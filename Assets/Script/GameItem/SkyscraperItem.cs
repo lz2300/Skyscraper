@@ -46,8 +46,9 @@ public class SkyscraperItem : ItemData
             }
             GameCtroller.Ins.gameManager.AddPosition();
             isOpen = false;
-            rig2d.mass = 1000;
-            rig2d.gravityScale = 1;
+            rig2d.mass = 100;
+            rig2d.gravityScale = 0.3f;
+            rig2d.velocity = Vector2.zero;
         }
     }
 }

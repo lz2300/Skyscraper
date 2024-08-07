@@ -98,20 +98,20 @@ public class TimeManager : MonoBehaviour
         }
 
         //记录速度使用时间
-        for (int i = 0; i < listCumulativeTime.Count; i++)
-        {
-            if (listCumulativeTime[i].remeberMoveSpeed == GameCtroller.Ins.gameManager.moveSpeed)
-            {
-                listCumulativeTime[i].f_Time += Time.deltaTime;            
-            }
-            if (listCumulativeTime[i].f_Time > speedUseTime)
-            {
-                speed = listCumulativeTime[i].remeberMoveSpeed;
-                speedUseTime = listCumulativeTime[i].f_Time;
-            }
-        }
-        GameCtroller.Ins.gameManager.MaximumUsageSpeed.text = speed.ToString();
-        GameCtroller.Ins.gameManager.MaximumUsageSpeedTime.text = speedUseTime.ToString();
+        //for (int i = 0; i < listCumulativeTime.Count; i++)
+        //{
+        //    if (listCumulativeTime[i].remeberMoveSpeed == GameCtroller.Ins.gameManager.moveSpeed)
+        //    {
+        //        listCumulativeTime[i].f_Time += Time.deltaTime;            
+        //    }
+        //    if (listCumulativeTime[i].f_Time > speedUseTime)
+        //    {
+        //        speed = listCumulativeTime[i].remeberMoveSpeed;
+        //        speedUseTime = listCumulativeTime[i].f_Time;
+        //    }
+        //}
+        //GameCtroller.Ins.gameManager.MaximumUsageSpeed.text = speed.ToString();
+        //GameCtroller.Ins.gameManager.MaximumUsageSpeedTime.text = speedUseTime.ToString();
     }
 
     internal void Init()
